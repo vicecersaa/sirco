@@ -19,16 +19,23 @@ export default function Hero() {
       wrapper.appendChild(char)
     })
 
+    const topCells = document.querySelectorAll('[data-cell-top]')
+    const bottomCells = document.querySelectorAll('[data-cell-bottom]')
+
     const tl = gsap.timeline({ delay: 0.3 })
 
-    tl.from('[data-cell]', {
-      scaleY: 0,
-      opacity: 0,
-      transformOrigin: 'bottom center',
-      duration: 1.2,
+    tl.from(topCells, {
+      yPercent: -100,
+      duration: 1.4,
       ease: 'expo.inOut',
-      stagger: { amount: 0.7, from: 'random' }
+      stagger: { amount: 0.4, from: 'start' }
     })
+    .from(bottomCells, {
+      yPercent: 100,
+      duration: 1.4,
+      ease: 'expo.inOut',
+      stagger: { amount: 0.4, from: 'start' }
+    }, '<')
     .from('[data-sweep]', {
       scaleX: 0,
       duration: 0.8,
@@ -84,21 +91,24 @@ export default function Hero() {
     <section ref={container} className="relative w-full h-screen bg-[#0e0e0c] overflow-hidden font-sans">
 
       <div className="absolute inset-0 grid grid-cols-3 grid-rows-2 gap-[2px]">
-        {[1, 2, 3, 4, 5].map((n) => (
-          <div
-            key={n}
-            data-cell
-            className={`relative overflow-hidden ${n === 2 ? 'col-span-1 row-span-2' : 'col-span-1 row-span-1'}`}
-          >
-            <img
-              src={`/images/project-${n}.jpg`}
-              alt={`Project ${n}`}
-              loading="eager"
-              fetchPriority="high"
-              className="absolute inset-0 w-full h-full object-cover brightness-90"
-            />
-          </div>
-        ))}
+        {[1, 2, 3, 4, 5].map((n) => {
+          const isTop = n <= 3
+          return (
+            <div
+              key={n}
+              {...(isTop ? { 'data-cell-top': '' } : { 'data-cell-bottom': '' })}
+              className={`relative overflow-hidden ${n === 2 ? 'col-span-1 row-span-2' : 'col-span-1 row-span-1'}`}
+            >
+              <img
+                src={`/images/project-${n}.jpg`}
+                alt={`Project ${n}`}
+                loading="eager"
+                fetchPriority="high"
+                className="absolute inset-0 w-full h-full object-cover brightness-90"
+              />
+            </div>
+          )
+        })}
         <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0c] via-[#0e0e0c]/40 to-transparent z-10" />
       </div>
 
@@ -106,7 +116,7 @@ export default function Hero() {
         data-sweep
         className="absolute z-20"
         style={{
-          bottom: 'calc(2rem + clamp(140px, 28vw, 260px) * 0.88 + 8px)',
+          bottom: 'calc(2rem + clamp(140px, 28vw, 260px) * 0.88 + 32px)',
           left: '2rem',
           right: '2rem',
           height: '0.5px',
