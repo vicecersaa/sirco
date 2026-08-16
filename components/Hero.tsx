@@ -232,7 +232,7 @@ export default function Hero() {
       const mobile = isMobile()
       const tablet = isTablet()
 
-      if (mobile) {
+     if (mobile) {
   layer.style.cssText = `
     position:absolute;
     inset:0;
@@ -241,11 +241,8 @@ export default function Hero() {
     flex-direction:column;
     height:100%;
     min-height:100%;
-    max-height:none;
-    overflow-y:auto;
+    overflow:hidden;
     overflow-x:hidden;
-    overscroll-behavior-y:contain;
-    -webkit-overflow-scrolling:touch;
     will-change:transform;
   `
 
@@ -261,15 +258,17 @@ export default function Hero() {
           </div>
 
           <div style="
-  flex:0 0 auto;
-  min-height:58%;
-  display:flex;
-  flex-direction:column;
-  justify-content:space-between;
-  padding:24px 28px calc(64px + env(safe-area-inset-bottom));
-  background:#f4f3ef;
-  color:#111;
-  box-sizing:border-box;
+  flex:1 1 auto;
+min-height:0;
+display:flex;
+flex-direction:column;
+justify-content:space-between;
+padding:24px 28px calc(72px + env(safe-area-inset-bottom));
+background:#f4f3ef;
+color:#111;
+box-sizing:border-box;
+overflow-y:auto;
+-webkit-overflow-scrolling:touch;
 ">
 
             <div data-layer-content>
@@ -1046,40 +1045,40 @@ navEls.forEach((el, i) => {
     let wheelUnlockTimer = 0
 
     const setPeekProgress = (p: number) => {
-      if (!peekEl) return
+  if (!peekEl) return
 
-      const currentLayer = layers[layers.length - 1]
+  const currentLayer = layers[layers.length - 1]
 
-      if (mobileMode) {
-        gsap.to(peekEl, {
-          yPercent: 100 - p * 100,
-          duration: 0.58,
-          ease: 'power3.out',
-          overwrite: true,
-        })
+  if (mobileMode) {
+    gsap.to(peekEl, {
+      yPercent: 100 - p * 100,
+      duration: 0.58,
+      ease: 'power2.out',
+      overwrite: true,
+    })
 
-        return
-      }
+    return
+  }
 
-      gsap.to(peekEl, {
-        yPercent: 100 - p * 100,
-        scale: 1.02 - p * 0.02,
-        duration: 0.62,
-        ease: 'power3.out',
-        overwrite: true,
-      })
+  gsap.to(peekEl, {
+    yPercent: 100 - p * 100,
+    scale: 1.02 - p * 0.02,
+    duration: 1,
+    ease: 'power2.out',
+    overwrite: true,
+  })
 
-      if (currentLayer && currentLayer !== peekEl) {
-        gsap.to(currentLayer, {
-          yPercent: -p * 10,
-          scale: 1 - p * 0.02,
-          opacity: 1 - p * 0.12,
-          duration: 0.62,
-          ease: 'power3.out',
-          overwrite: true,
-        })
-      }
-    }
+  if (currentLayer && currentLayer !== peekEl) {
+    gsap.to(currentLayer, {
+      yPercent: -p * 10,
+      scale: 1 - p * 0.02,
+      opacity: 1 - p * 0.12,
+      duration: 1,
+      ease: 'power2.out',
+      overwrite: true,
+    })
+  }
+}
 
     const ensurePeek = () => {
       const next =
@@ -1496,9 +1495,12 @@ navEls.forEach((el, i) => {
   }, [])
 
   return (
-    <section 
-  ref={container} 
+    <section
+  ref={container}
   className="relative w-full h-[100svh] md:h-screen bg-[#0e0e0c] overflow-hidden font-sans"
+  style={{
+    isolation: 'isolate',
+  }}
 >
       {/* =====================================================
           IMAGE GRID
@@ -1898,47 +1900,47 @@ navEls.forEach((el, i) => {
       </div>
 
       {/* =====================================================
-          SIRCO
-      ===================================================== */}
+    SIRCO — ALWAYS VISIBLE
+===================================================== */}
 
-      <div
-        className="absolute z-[510] hidden md:block"
-        style={{
-          bottom:
-            'clamp(16px, 2vw, 32px)',
-          left:
-            'clamp(16px, 2.5vw, 32px)',
-        }}
-      >
-        <h1
-          data-sirco
-          className="font-bold leading-[0.88] tracking-[-0.04em] whitespace-nowrap"
-          style={{
-            fontSize:
-              'clamp(48px, 15vw, 260px)',
-            WebkitTextStroke:
-              '1.5px rgba(255,255,255,0.7)',
-            color: 'transparent',
-          }}
-        >
-          SIRCO
-        </h1>
+<div
+  data-sirco-container
+  className="absolute block pointer-events-none"
+  style={{
+    zIndex: 700,
+    bottom: 'clamp(16px, 2vw, 32px)',
+    left: 'clamp(16px, 2.5vw, 32px)',
+    isolation: 'isolate',
+  }}
+>
+  <h1
+    data-sirco
+    className="font-bold leading-[0.88] tracking-[-0.04em] whitespace-nowrap"
+    style={{
+      fontSize: 'clamp(48px, 15vw, 260px)',
+      WebkitTextStroke: '1.5px rgba(255,255,255,0.7)',
+      color: 'transparent',
+      position: 'relative',
+      zIndex: 701,
+    }}
+  >
+    SIRCO
+  </h1>
 
-        <p
-          data-tagline
-          className="uppercase text-white/60 font-light"
-          style={{
-            fontSize:
-              'clamp(9px, 0.7vw, 13px)',
-            letterSpacing: '0.18em',
-            marginTop:
-              'clamp(8px, 1vw, 20px)',
-          }}
-        >
-          Jakarta · Est. 2026
-        </p>
-      </div>
-
+  <p
+    data-tagline
+    className="uppercase text-white/60 font-light"
+    style={{
+      fontSize: 'clamp(9px, 0.7vw, 13px)',
+      letterSpacing: '0.18em',
+      marginTop: 'clamp(8px, 1vw, 20px)',
+      position: 'relative',
+      zIndex: 701,
+    }}
+  >
+    Jakarta · Est. 2026
+  </p>
+</div>
       {/* =====================================================
           CLOCK + PROJECT COUNT
       ===================================================== */}
@@ -1982,15 +1984,16 @@ navEls.forEach((el, i) => {
       ===================================================== */}
 
       <div
-        data-expand-overlay
-        className="fixed z-[500]"
-        style={{
-          display: 'none',
-          pointerEvents: 'none',
-          overflow: 'hidden',
-          background: '#0e0e0c',
-        }}
-      >
+  data-expand-overlay
+  className="fixed"
+  style={{
+    zIndex: 500,
+    display: 'none',
+    pointerEvents: 'none',
+    overflow: 'hidden',
+    background: '#0e0e0c',
+  }}
+>
         <button
           data-expand-close
           className="
