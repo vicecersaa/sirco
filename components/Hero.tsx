@@ -234,16 +234,19 @@ export default function Hero() {
 
       if (mobile) {
         layer.style.cssText = `
-          position:absolute;
-          inset:0;
-          z-index:1;
-          display:flex;
-          flex-direction:column;
-          will-change:transform;
-        `
+  position:absolute;
+  inset:0;
+  z-index:1;
+  display:flex;
+  flex-direction:column;
+  height:100%;
+  max-height:100%;
+  overflow:hidden;
+  will-change:transform;
+`
 
         layer.innerHTML = `
-          <div style="position:relative;height:45%;overflow:hidden;flex-shrink:0;">
+          <div style="position:relative;height:42%;min-height:0;overflow:hidden;flex-shrink:0;">
             <img src="${city.img}" alt="${city.name}"
               style="width:100%;height:100%;object-fit:cover;filter:brightness(0.7);display:block;" />
             <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.6),transparent 60%);"></div>
@@ -253,8 +256,18 @@ export default function Hero() {
             </span>
           </div>
 
-          <div style="flex:1;display:flex;flex-direction:column;justify-content:space-between;
-            padding:32px 28px;background:#f4f3ef;color:#111;box-sizing:border-box;overflow-y:auto;">
+          <div style="
+  flex:1;
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  padding:24px 28px;
+  background:#f4f3ef;
+  color:#111;
+  box-sizing:border-box;
+  overflow:hidden;
+">
 
             <div data-layer-content>
               <p style="font-size:11px;letter-spacing:0.3em;text-transform:uppercase;color:#666;margin:0 0 14px;">
