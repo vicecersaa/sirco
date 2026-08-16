@@ -239,8 +239,8 @@ export default function Hero() {
     z-index:1;
     display:flex;
     flex-direction:column;
+    height:100%;
     min-height:100%;
-    height:auto;
     max-height:none;
     overflow-y:auto;
     overflow-x:hidden;
@@ -261,12 +261,12 @@ export default function Hero() {
           </div>
 
           <div style="
-  flex:1;
-  min-height:0;
+  flex:0 0 auto;
+  min-height:58%;
   display:flex;
   flex-direction:column;
   justify-content:space-between;
-  padding:24px 28px calc(56px + env(safe-area-inset-bottom));
+  padding:24px 28px calc(64px + env(safe-area-inset-bottom));
   background:#f4f3ef;
   color:#111;
   box-sizing:border-box;
@@ -1902,7 +1902,7 @@ navEls.forEach((el, i) => {
       ===================================================== */}
 
       <div
-        className="absolute z-[510]"
+        className="absolute z-[510] hidden md:block"
         style={{
           bottom:
             'clamp(16px, 2vw, 32px)',
