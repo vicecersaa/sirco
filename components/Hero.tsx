@@ -233,17 +233,21 @@ export default function Hero() {
       const tablet = isTablet()
 
       if (mobile) {
-        layer.style.cssText = `
-  position:absolute;
-  inset:0;
-  z-index:1;
-  display:flex;
-  flex-direction:column;
-  height:100%;
-  max-height:100%;
-  overflow:hidden;
-  will-change:transform;
-`
+  layer.style.cssText = `
+    position:absolute;
+    inset:0;
+    z-index:1;
+    display:flex;
+    flex-direction:column;
+    min-height:100%;
+    height:auto;
+    max-height:none;
+    overflow-y:auto;
+    overflow-x:hidden;
+    overscroll-behavior-y:contain;
+    -webkit-overflow-scrolling:touch;
+    will-change:transform;
+  `
 
         layer.innerHTML = `
           <div style="position:relative;height:42%;min-height:0;overflow:hidden;flex-shrink:0;">
@@ -262,11 +266,10 @@ export default function Hero() {
   display:flex;
   flex-direction:column;
   justify-content:space-between;
-  padding:24px 28px;
+  padding:24px 28px calc(56px + env(safe-area-inset-bottom));
   background:#f4f3ef;
   color:#111;
   box-sizing:border-box;
-  overflow:hidden;
 ">
 
             <div data-layer-content>
@@ -955,7 +958,7 @@ navEls.forEach((el, i) => {
 
       gsap.to(expandOverlay, {
         width: '100vw',
-        height: '100vh',
+        height: '100svh',
         top: 0,
         left: 0,
         borderRadius: 0,
@@ -966,7 +969,7 @@ navEls.forEach((el, i) => {
       gsap.set(expandOverlay, {
         display: 'block',
         width: '100vw',
-        height: '100vh',
+        height: '100svh',
         top: 0,
         left: 0,
         right: 'auto',
@@ -1493,10 +1496,10 @@ navEls.forEach((el, i) => {
   }, [])
 
   return (
-    <section
-      ref={container}
-      className="relative w-full h-screen bg-[#0e0e0c] overflow-hidden font-sans"
-    >
+    <section 
+  ref={container} 
+  className="relative w-full h-[100svh] md:h-screen bg-[#0e0e0c] overflow-hidden font-sans"
+>
       {/* =====================================================
           IMAGE GRID
       ===================================================== */}
