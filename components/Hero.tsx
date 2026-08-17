@@ -710,10 +710,46 @@ card.style.right = `${window.innerWidth * 0.035}px`
 card.style.left = 'auto'
 
 gsap.set(card, { opacity: 0, y: 8 })
-gsap.set(el, { scale: 1, y: 0, x: 0 })
+gsap.set(card, {
+  opacity: 0,
+  y: 8,
+})
+
+gsap.set(el, {
+  scale: 1,
+  y: 0,
+  x: 0,
+  transformOrigin: 'right top',
+})
+
 const xOffset = window.innerWidth * 0.088
-gsap.to(el, { scale: 3.5, y: -12, x: xOffset, transformOrigin: 'right top', color: 'rgba(255,255,255,1)', duration: 0.3, ease: 'power3.out' })
-gsap.to(card, { opacity: 1, y: 0, duration: 0.25, ease: 'power3.out' })
+
+gsap.to(el, {
+  scale: 3.5,
+  y: -12,
+  x: xOffset,
+  transformOrigin: 'right top',
+  color: 'rgba(255,255,255,1)',
+  duration: 0.3,
+  ease: 'power3.out',
+})
+
+gsap.to(card, {
+  opacity: 1,
+  y: 0,
+  duration: 0.25,
+  ease: 'power3.out',
+
+  onStart: () => {
+    const rect = el.getBoundingClientRect()
+
+    card.style.display = 'block'
+    card.style.position = 'fixed'
+    card.style.top = `${rect.bottom + 40}px`
+    card.style.right = `${window.innerWidth * 0.035}px`
+    card.style.left = 'auto'
+  },
+})
   navEls.forEach((other: HTMLElement, j: number) => {
     if (i !== j) gsap.to(other, { y: j > i ? 280 : 0, opacity: 1, duration: 0.35, ease: 'power3.out' })
   })
