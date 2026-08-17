@@ -703,7 +703,7 @@ export default function Hero() {
   gsap.set(card, { opacity: 0, y: 8 })
   const rect = el.getBoundingClientRect()
   card.style.cssText += `;position:fixed;top:${rect.bottom + 40}px;right:${window.innerWidth - rect.right}px;left:auto;display:block;`
-  gsap.to(el, { scale: 3.5, x: 110, y: -12, transformOrigin: 'right top', color: 'rgba(255,255,255,1)', duration: 0.3, ease: 'power3.out' })
+  gsap.to(el, { scale: 3.5, x: rect.width * 1, y: -12, transformOrigin: 'right top', color: 'rgba(255,255,255,1)', duration: 0.3, ease: 'power3.out' })
   navEls.forEach((other: HTMLElement, j: number) => {
     if (i !== j) gsap.to(other, { y: j > i ? 280 : 0, opacity: 1, duration: 0.35, ease: 'power3.out' })
   })
