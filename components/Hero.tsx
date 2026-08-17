@@ -331,13 +331,11 @@ export default function Hero() {
     // =========================================================
 
     const SHRINK_VH = 320
-    const TIMELINE_REVEAL_VH = 65
-    // Setiap milestone butuh ~100vh scroll untuk "step" ke berikutnya
-    const TIMELINE_SCROLL_VH = SNAP_ITEM_COUNT * 100
-
-    const TOTAL_SCROLL_VH =
-      SHRINK_VH + TIMELINE_REVEAL_VH + TIMELINE_SCROLL_VH
-
+const TIMELINE_REVEAL_VH = 65
+const TIMELINE_SCROLL_VH = (SNAP_ITEM_COUNT + 1) * 100
+const PORTAL_SCROLL_VH = 200
+const TOTAL_SCROLL_VH = SHRINK_VH + TIMELINE_REVEAL_VH + TIMELINE_SCROLL_VH + PORTAL_SCROLL_VH
+    let portalOrigin: { x: number; y: number } | null = null
     const shrinkST = ScrollTrigger.create({
       trigger: containerEl,
       start: 'top top',
@@ -350,6 +348,15 @@ export default function Hero() {
 
       onUpdate(self) {
         const raw = self.progress
+        const _mw = document.querySelector<HTMLElement>('[data-material-wrapper]')
+  console.log('CLIP:', _mw?.style.clipPath, 'raw:', raw.toFixed(3))
+
+        const portalStart = (SHRINK_VH + TIMELINE_REVEAL_VH + TIMELINE_SCROLL_VH) / TOTAL_SCROLL_VH
+// Tambah offset 0.02 supaya portal baru mulai setelah end item settled
+const portalProgressRaw = (raw - (portalStart + 0.02)) / (PORTAL_SCROLL_VH / TOTAL_SCROLL_VH)
+const portalProgress = gsap.utils.clamp(0, 1, portalProgressRaw)
+  console.log({ raw, portalStart, portalProgress })
+
 
         // -------------------------------------------------------
         // SHRINK
@@ -411,17 +418,25 @@ export default function Hero() {
         // Kita geser mereka relative terhadap item aktif.
         // -------------------------------------------------------
 
-        const timelineProgress =
-          revealProgress < 1
-            ? 0
-            : gsap.utils.clamp(
-                0,
-                1,
-                (raw - revealEnd) / (1 - revealEnd),
-              )
+        const timelineEnd = (SHRINK_VH + TIMELINE_REVEAL_VH + TIMELINE_SCROLL_VH) / TOTAL_SCROLL_VH
+
+const timelineProgress =
+  revealProgress < 1
+    ? 0
+    : gsap.utils.clamp(
+        0,
+        1,
+        (raw - revealEnd) / (timelineEnd - revealEnd),  // ← fix
+      )
 
         // activeFloat: posisi "float" antar item (0 → SNAP_ITEM_COUNT-1)
-        const activeFloat = timelineProgress * (SNAP_ITEM_COUNT - 1)
+        const DWELL_RATIO = 0.50  // 15% scroll terakhir = dwell di end item
+const adjustedProgress = timelineProgress < (1 - DWELL_RATIO)
+  ? timelineProgress / (1 - DWELL_RATIO) * ((SNAP_ITEM_COUNT - 2) / (SNAP_ITEM_COUNT - 1))
+  : (SNAP_ITEM_COUNT - 2) / (SNAP_ITEM_COUNT - 1) + 
+    ((timelineProgress - (1 - DWELL_RATIO)) / DWELL_RATIO) * (1 / (SNAP_ITEM_COUNT - 1))
+
+const activeFloat = adjustedProgress * (SNAP_ITEM_COUNT - 1)
         const activeIndex = Math.round(activeFloat)
         console.log('activeFloat:', activeFloat, 'activeIndex:', activeIndex)
         // t: seberapa jauh kita sudah berpindah dari item sebelumnya ke berikutnya
@@ -455,6 +470,63 @@ export default function Hero() {
   item.style.textShadow = 'none'
   item.style.visibility = finalOpacity < 0.01 ? 'hidden' : 'visible'
 })
+
+// ── PORTAL RIPPLE WIPE ────────────────────────────────────
+const portalDot = document.querySelector<HTMLElement>('[data-portal-dot]')
+const materialWrapper = document.querySelector<HTMLElement>('[data-material-wrapper]')
+
+// Capture origin saat end item active DAN portal belum mulai
+if (activeIndex === SNAP_ITEM_COUNT - 1 && portalProgress < 0.001 && !portalOrigin && portalDot) {
+  const r = portalDot.getBoundingClientRect()
+  if (r.width > 0 && r.height > 0) {
+    portalOrigin = { x: r.left + r.width / 2, y: r.top + r.height / 2 }
+  }
+}
+
+// Reset saat mundur dari end item
+if (activeIndex < SNAP_ITEM_COUNT - 1 && portalProgress < 0.001) {
+  portalOrigin = null
+  if (materialWrapper) {
+    materialWrapper.style.clipPath = 'circle(0px at 50% 50%)'
+    materialWrapper.style.pointerEvents = 'none'
+  }
+  if (portalDot) portalDot.style.opacity = '1'
+}
+
+console.log({
+  activeIndex,
+  portalProgress,
+  portalOrigin,
+  clipPath: materialWrapper?.style.clipPath,
+})
+
+// Animate
+if (portalOrigin && materialWrapper && portalProgress > 0) {
+  const easedPortal = easeInOut(portalProgress)
+  const { x: cx, y: cy } = portalOrigin
+  const endR = Math.sqrt(
+    Math.pow(Math.max(cx, window.innerWidth - cx), 2) +
+    Math.pow(Math.max(cy, window.innerHeight - cy), 2)
+  ) * 1.1
+  const currentR = 12 + (endR - 12) * easedPortal
+  materialWrapper.style.clipPath = `circle(${currentR}px at ${cx}px ${cy}px)`
+  materialWrapper.style.pointerEvents = easedPortal > 0.5 ? 'auto' : 'none'
+  if (portalDot) portalDot.style.opacity = portalProgress > 0.05 ? '0' : '1'
+}
+
+// ── MATERIAL SECTION ENTER ──────────────────────────────
+if (portalProgress >= 0.85 && portalProgress < 0.9) {
+  const ms = document.querySelector<HTMLElement>(
+    '[data-material-section]'
+  )
+
+  if (ms && !ms.dataset.animated) {
+    ms.dataset.animated = 'true'
+    ms.dispatchEvent(new CustomEvent('portal-enter'))
+  }
+}
+
+
       },
     })
 
@@ -691,109 +763,190 @@ export default function Hero() {
     const isTouch = () => window.matchMedia('(hover: none)').matches
 
     navEls.forEach((el: HTMLElement, i: number) => {
-      const card = document.querySelector<HTMLElement>(`[data-city-card="${i}"]`)
-
-      el.addEventListener('mouseenter', () => {
-  if (isTouch() || !card) return
-  autoPlayPaused = true
-  hoveredProject = 0
-  window.clearTimeout(autoPlayTimer)
-  showAllProjects()
-  gsap.to(focusOverlay, { opacity: 1, duration: 0.35, ease: 'power2.out' })
-  gsap.set(el, { scale: 1, y: 0, x: 0 })
-  gsap.set(card, { opacity: 0, y: 8 })
-  const rect = el.getBoundingClientRect()
-card.style.display = 'block'
-card.style.position = 'fixed'
-card.style.top = `${rect.bottom + 40}px`
-card.style.right = `${window.innerWidth * 0.035}px`
-card.style.left = 'auto'
-
-gsap.set(card, { opacity: 0, y: 8 })
-gsap.set(card, {
-  opacity: 0,
-  y: 8,
-})
-
-gsap.set(el, {
-  scale: 1,
-  y: 0,
-  x: 0,
-  transformOrigin: 'right top',
-})
-
-const xOffset = window.innerWidth * 0.088
-
-gsap.to(el, {
-  scale: 3.5,
-  y: -12,
-  x: xOffset,
-  transformOrigin: 'right top',
-  color: 'rgba(255,255,255,1)',
-  duration: 0.3,
-  ease: 'power3.out',
-})
-
-gsap.to(card, {
-  opacity: 1,
-  y: 0,
-  duration: 0.25,
-  ease: 'power3.out',
-
-  onStart: () => {
-    const rect = el.getBoundingClientRect()
-
+  const card = document.querySelector<HTMLElement>(`[data-city-card="${i}"]`)
+  let isClicking = false  // ← flag baru, cegah mouseleave hide card pas click
+ 
+  // ── MOUSEENTER ───────────────────────────────────────────
+  el.addEventListener('mouseenter', () => {
+    if (isTouch() || !card) return
+    autoPlayPaused = true
+    hoveredProject = 0
+    window.clearTimeout(autoPlayTimer)
+    showAllProjects()
+    gsap.to(focusOverlay, { opacity: 1, duration: 0.35, ease: 'power2.out' })
+    gsap.set(el, { scale: 1, y: 0, x: 0 })
+    gsap.set(card, { opacity: 0, y: 8 })
+    const nav = el.closest<HTMLElement>('[data-city-nav]')
+    if (!nav) return
+ 
+    const navRect = nav.getBoundingClientRect()
+    const cardGap = window.innerWidth <= 1920 ? 55 : 60
+ 
     card.style.display = 'block'
     card.style.position = 'fixed'
-    card.style.top = `${rect.bottom + 40}px`
-    card.style.right = `${window.innerWidth * 0.035}px`
+    card.style.top = `${el.getBoundingClientRect().bottom + cardGap}px`
+ 
+    const cardRightOffset = Math.min(30, Math.max(16, window.innerWidth * 0.028))
+    card.style.right = `${window.innerWidth - navRect.right + cardRightOffset}px`
     card.style.left = 'auto'
-  },
-})
-  navEls.forEach((other: HTMLElement, j: number) => {
-    if (i !== j) gsap.to(other, { y: j > i ? 280 : 0, opacity: 1, duration: 0.35, ease: 'power3.out' })
-  })
-  gsap.to(card, { opacity: 1, y: 0, duration: 0.25, ease: 'power3.out' })
-})
-
-      el.addEventListener('mouseleave', () => {
-        if (isTouch()) return
-        autoPlayPaused = true
-        window.clearTimeout(autoPlayTimer)
-        showAllProjects()
-        gsap.to(focusOverlay, { opacity: 0, duration: 0.25 })
-        gsap.to(el, { scale: 1, x: 0, y: 0, color: 'rgba(255,255,255,0.8)', duration: 0.3, ease: 'power3.out', overwrite: true })
-        navEls.forEach((other: HTMLElement, j: number) => {
-  if (i !== j) gsap.to(other, { y: 0, opacity: 1, duration: 0.3, ease: 'power3.out', overwrite: true })
-})
-        if (card) gsap.to(card, { opacity: 0, y: 8, duration: 0.2, ease: 'power2.in', onComplete: () => { card.style.display = 'none' } })
-      })
-
-      el.addEventListener('click', () => {
-        autoPlayPaused = true
-        window.clearTimeout(autoPlayTimer)
-        showAllProjects()
-        if (isExpanded) return
-        isExpanded = true
-        currentCityIndex = i
-        previousBodyOverflow = document.body.style.overflow
-        document.body.style.overflow = 'hidden'
-        if (isMobile()) gsap.to(sircoContainer, { opacity: 0, duration: 0.3, ease: 'power2.out' })
-        const cardRect = card?.getBoundingClientRect() ?? null
-        if (cardRect && !isTouch()) {
-          gsap.set(expandOverlay, { display: 'block', width: cardRect.width, height: cardRect.height, top: cardRect.top, left: cardRect.left, right: 'auto', bottom: 'auto', borderRadius: 2, opacity: 1, scale: 1 })
-          initExpandLayer(i)
-          gsap.to(expandOverlay, { width: '100vw', height: '100svh', top: 0, left: 0, borderRadius: 0, duration: 0.9, ease: 'expo.inOut' })
-        } else {
-          gsap.set(expandOverlay, { display: 'block', width: '100vw', height: '100svh', top: 0, left: 0, right: 'auto', bottom: 'auto', borderRadius: 0, opacity: 0, scale: 1 })
-          initExpandLayer(i)
-          gsap.to(expandOverlay, { opacity: 1, duration: 0.5, ease: 'power2.out' })
-        }
-        gsap.fromTo(expandClose, { opacity: 0 }, { opacity: 1, duration: 0.4, delay: 0.8 })
-        expandOverlay.style.pointerEvents = 'auto'
-        updateDots(i)
+ 
+    gsap.set(card, { opacity: 0, y: 8 })
+    gsap.set(el, { scale: 1, y: 0, x: 0 })
+ 
+    const xOffset = window.innerWidth <= 1440 ? 0 : 15
+    gsap.to(el, {
+      scale: 3.5, y: -12, x: xOffset,
+      transformOrigin: 'right top',
+      color: 'rgba(255,255,255,1)',
+      duration: 0.3, ease: 'power3.out',
+    })
+    gsap.to(card, { opacity: 1, y: 0, duration: 0.25, ease: 'power3.out' })
+ 
+    navEls.forEach((other: HTMLElement, j: number) => {
+      if (i !== j) gsap.to(other, {
+        y: j > i
+          ? window.innerWidth <= 1440 ? 230 : window.innerWidth <= 1920 ? 290 : 300
+          : 0,
+        opacity: 1, duration: 0.35, ease: 'power3.out',
       })
     })
+  })
+ 
+  // ── MOUSELEAVE ───────────────────────────────────────────
+  el.addEventListener('mouseleave', () => {
+    if (isTouch()) return
+    // Jangan hide card kalau lagi mau click
+    if (isClicking) return
+ 
+    autoPlayPaused = true
+    window.clearTimeout(autoPlayTimer)
+    showAllProjects()
+    gsap.to(focusOverlay, { opacity: 0, duration: 0.25 })
+    gsap.to(el, { scale: 1, x: 0, y: 0, color: 'rgba(255,255,255,0.8)', duration: 0.3, ease: 'power3.out', overwrite: true })
+    navEls.forEach((other: HTMLElement, j: number) => {
+      if (i !== j) {
+        gsap.to(other, {
+          scale: 1, x: 0, y: 0, opacity: 1,
+          color: 'rgba(255,255,255,0.9)',
+          duration: 0.3, ease: 'power3.out', overwrite: true,
+        })
+      }
+    })
+    if (card) gsap.to(card, {
+      opacity: 0, y: 8, duration: 0.2, ease: 'power2.in',
+      onComplete: () => { card.style.display = 'none' },
+    })
+  })
+ 
+  // ── CLICK ────────────────────────────────────────────────
+  el.addEventListener('click', () => {
+    autoPlayPaused = true
+    window.clearTimeout(autoPlayTimer)
+    showAllProjects()
+    if (isExpanded) return
+ 
+    // Set flag supaya mouseleave tidak hide card
+    isClicking = true
+ 
+    isExpanded = true
+    currentCityIndex = i
+    previousBodyOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+ 
+    if (isMobile()) gsap.to(sircoContainer, { opacity: 0, duration: 0.3, ease: 'power2.out' })
+ 
+    // Ambil rect card yang MASIH VISIBLE (belum di-hide)
+    const cardRect = card?.getBoundingClientRect() ?? null
+ 
+    if (cardRect && !isTouch() && card) {
+      // 1. Init expand content dulu (di balik card)
+      initExpandLayer(i)
+ 
+      // 2. Set expandOverlay persis di posisi & ukuran card kecil
+      gsap.set(expandOverlay, {
+        display: 'block',
+        width: cardRect.width,
+        height: cardRect.height,
+        top: cardRect.top,
+        left: cardRect.left,
+        right: 'auto',
+        bottom: 'auto',
+        borderRadius: 2,
+        opacity: 1,
+        scale: 1,
+      })
+ 
+      // 3. Fade out card kecil bersamaan dengan expand mulai
+      gsap.to(card, { opacity: 0, duration: 0.18, ease: 'power2.in',
+        onComplete: () => { card.style.display = 'none' },
+      })
+ 
+      // Reset nav elements
+      gsap.to(el, { scale: 1, x: 0, y: 0, color: 'rgba(255,255,255,0.8)', duration: 0.25, ease: 'power3.out', overwrite: true })
+      navEls.forEach((other: HTMLElement, j: number) => {
+        if (i !== j) gsap.to(other, { scale: 1, x: 0, y: 0, opacity: 1, color: 'rgba(255,255,255,0.9)', duration: 0.25, ease: 'power3.out', overwrite: true })
+      })
+      gsap.to(focusOverlay, { opacity: 0, duration: 0.25 })
+ 
+      // 4. Morph card kecil → fullscreen
+      gsap.to(expandOverlay, {
+        width: '100vw',
+        height: '100svh',
+        top: 0,
+        left: 0,
+        borderRadius: 0,
+        duration: 0.85,
+        ease: 'expo.inOut',
+        onComplete: () => { isClicking = false },
+      })
+    } else {
+      // Touch / no card: fade in biasa
+      gsap.set(expandOverlay, {
+        display: 'block', width: '100vw', height: '100svh',
+        top: 0, left: 0, right: 'auto', bottom: 'auto',
+        borderRadius: 0, opacity: 0, scale: 1,
+      })
+      initExpandLayer(i)
+      gsap.to(expandOverlay, {
+        opacity: 1, duration: 0.5, ease: 'power2.out',
+        onComplete: () => { isClicking = false },
+      })
+    }
+ 
+    gsap.fromTo(expandClose, { opacity: 0 }, { opacity: 1, duration: 0.4, delay: 0.8 })
+    expandOverlay.style.pointerEvents = 'auto'
+    updateDots(i)
+  })
+})
+ 
+// ─────────────────────────────────────────────────────────────
+// BONUS: Smooth scroll antar kota di expand overlay
+//
+// Ganti konstanta dan handleWheel di bawah ini juga:
+// ─────────────────────────────────────────────────────────────
+ 
+// Hapus: const TICKS_NEEDED = mobileMode ? 1 : 2
+// Ganti dengan: (tidak pakai TICKS_NEEDED lagi)
+ 
+// Ganti handleWheel dengan versi ini:
+const handleWheel = (e: WheelEvent) => {
+  if (!isExpanded) return
+  e.preventDefault()
+  e.stopPropagation()
+  if (committing || Math.abs(e.deltaY) < 8) return
+ 
+  // Langsung commit satu arah — tidak pakai progress/tick
+  const dir = e.deltaY > 0 ? 1 : -1
+  window.clearTimeout(wheelEndTimer)
+  wheelEndTimer = window.setTimeout(() => {
+    if (!isExpanded || committing) return
+    ensurePeek(dir)
+    commit(dir)
+  }, 60) // debounce 60ms — cukup untuk filter noise, cepat untuk feel smooth
+}
+ 
+
+
 
     // ── CITY SCROLL ───────────────────────────────────────────
 
@@ -810,6 +963,7 @@ gsap.to(card, {
     const setPeekProgress = (p: number, direction: 1 | -1) => {
       if (!peekEl) return
       const cur = layers[layers.length - 1]
+      
       if (mobileMode) {
         gsap.to(peekEl, { yPercent: direction > 0 ? 100 - p * 100 : -100 + p * 100, duration: 0.58, ease: 'power2.out', overwrite: true })
         return
@@ -833,13 +987,14 @@ gsap.to(card, {
     const resetTransition = () => { progress = 0; peekEl = null; peekIdx = -1 }
 
     const commit = (direction: 1 | -1) => {
+      
       if (!peekEl || committing) return
       committing = true
       const target = peekEl
       const targetIndex = peekIdx
       gsap.to(target, {
         yPercent: 0, scale: 1,
-        duration: mobileMode ? 0.58 : 0.72,
+        duration: mobileMode ? 0.85 : 1.2,
         ease: mobileMode ? 'power3.out' : 'expo.inOut',
         overwrite: true,
         onComplete: () => {
@@ -849,12 +1004,21 @@ gsap.to(card, {
           layers = [target]
           currentCityIndex = targetIndex
           const content = target.querySelector<HTMLElement>('[data-layer-content]')
-          if (content) gsap.fromTo(content, { y: direction > 0 ? 28 : -28, opacity: 0 }, { y: 0, opacity: 1, duration: 0.65, ease: 'power3.out' })
+          if (content) gsap.fromTo(content, { y: direction > 0 ? 28 : -28, opacity: 0 }, { y: 0, opacity: 1, duration: 0.85, ease: 'power3.out' })
           updateDots(currentCityIndex)
           resetTransition()
           committing = false
         },
       })
+      const cur = layers[layers.length - 1]
+if (cur && cur !== target) {
+  gsap.to(cur, {
+    opacity: 0,
+    duration: 0.6,
+    ease: 'power2.in',
+    overwrite: true,
+  })
+}
     }
 
     const onTick = (direction: 1 | -1) => {
@@ -879,15 +1043,7 @@ gsap.to(card, {
       onTick(dir > 0 ? 1 : -1)
     }
 
-    const handleWheel = (e: WheelEvent) => {
-      if (!isExpanded) return
-      e.preventDefault()
-      e.stopPropagation()
-      if (committing || Math.abs(e.deltaY) < 1) return
-      wheelDirection = e.deltaY > 0 ? 1 : -1
-      window.clearTimeout(wheelEndTimer)
-      wheelEndTimer = window.setTimeout(applyWheelGesture, 110)
-    }
+    
 
     expandOverlay.addEventListener('wheel', handleWheel, { passive: false })
 
@@ -1009,6 +1165,7 @@ gsap.to(card, {
       ===================================================== */}
       <section
         ref={container}
+        data-hero-section
         className="relative w-full h-[100svh] md:h-screen bg-[#e8e6e0] overflow-hidden font-sans"
         style={{ isolation: 'isolate' }}
       >
@@ -1029,43 +1186,79 @@ gsap.to(card, {
         >
 
            {/* CITY NAV */}
-          <nav
-            data-city-nav
-            className="absolute z-[200] flex flex-col items-end"
-            style={{ right: 0, top: '20%', transform: 'translateY(-50%)' }}
-          >
-            <div
-              style={{
-                position: 'absolute',
-                right: 'clamp(12px,2vw,28px)',
-                top: 0,
-                bottom: 0,
-                width: '0.5px',
-                background: 'rgba(255,255,255,0.5)',
-                pointerEvents: 'none',
-              }}
-            />
-            <div
-  className="flex flex-col items-end"
-  style={{ gap: 'calc(clamp(14px,2.2vw,28px) * var(--hero-scale, 1))', paddingRight: 'calc(clamp(20px,2.5vw,44px) * var(--hero-scale, 1))' }}
+<nav
+  data-city-nav
+  className="absolute z-[200] flex flex-col items-end"
+  style={{
+    right: 0,
+    top: '20%',
+    transform: 'translateY(-50%)',
+  }}
 >
-              {cities.map((city) => (
-                <div key={city.name} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span
-                    data-nav-dot
-                    style={{ width: 3, height: 3, borderRadius: '50%', background: 'rgba(255,255,255,0.9)', flexShrink: 0, opacity: 0, display: 'inline-block' }}
-                  />
-                  <span
-                    data-nav
-                    className="tracking-[0.28em] uppercase cursor-pointer inline-block origin-right font-light"
-                    style={{ fontSize: 'calc(clamp(11px,1vw,15px) * var(--hero-scale, 1))', color: 'rgba(255,255,255,0.9)', textShadow: '0 1px 2px rgba(0,0,0,1), 0 3px 8px rgba(0,0,0,0.95)', letterSpacing: '0.3em', gap: 'clamp(14px,2.2vw,28px)', paddingRight: 'clamp(20px,2.5vw,44px)' }}
-                  >
-                    {city.name}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </nav>
+  {/* Vertical line */}
+  <div
+    style={{
+      position: 'absolute',
+      right: 'clamp(12px, 2vw, 28px)',
+      top: 0,
+      bottom: 0,
+      width: '0.5px',
+      background: 'rgba(255,255,255,0.5)',
+      pointerEvents: 'none',
+    }}
+  />
+
+  {/* City links */}
+  <div
+    className="flex flex-col items-end"
+    style={{
+      gap: 'clamp(22px, 1.6vw, 42px)',
+      paddingRight: 'clamp(24px, 2vw, 44px)',
+    }}
+  >
+    {cities.map((city) => (
+      <div
+        key={city.name}
+        style={{
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+        }}
+      >
+        {/* Active dot */}
+        <span
+          data-nav-dot
+          style={{
+            width: 3,
+            height: 3,
+            borderRadius: '50%',
+            background: 'rgba(255,255,255,0.9)',
+            flexShrink: 0,
+            opacity: 0,
+            display: 'inline-block',
+          }}
+        />
+
+        {/* City name */}
+        <span
+          data-nav
+          className="tracking-[0.28em] uppercase cursor-pointer inline-block origin-right font-light"
+          style={{
+            fontSize: 'clamp(14px, 0.8vw, 18px)',
+            color: 'rgba(255,255,255,0.9)',
+            textShadow:
+              '0 1px 2px rgba(0,0,0,1), 0 3px 8px rgba(0,0,0,0.95)',
+            letterSpacing: '0.3em',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {city.name}
+        </span>
+      </div>
+    ))}
+  </div>
+</nav>
         
           {/* IMAGE GRID */}
           <div className="absolute inset-0 grid grid-cols-3 grid-rows-2 gap-[2px] overflow-hidden">
@@ -1164,13 +1357,40 @@ gsap.to(card, {
             >
               CLOSE ✕
             </button>
-            <div style={{ position: 'absolute', top: '18%', left: '50%', transform: 'translateX(-50%)', zIndex: 30, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, pointerEvents: 'none' }}>
-              <svg width="36" height="58" viewBox="0 0 36 58" fill="none">
-                <rect x="1" y="1" width="34" height="56" rx="17" stroke="rgba(0,0,0,0.35)" strokeWidth="1.5" />
-                <circle data-scroll-wheel-dot cx="18" cy="16" r="4" fill="rgba(0,0,0,0.5)" />
-              </svg>
-              <span style={{ fontSize: 9, letterSpacing: '0.4em', textTransform: 'uppercase', color: 'rgba(0,0,0,0.4)', fontWeight: 300 }}>Scroll</span>
-            </div>
+            <div style={{ 
+  position: 'absolute', 
+  right: 'clamp(32px,4vw,64px)', 
+  top: '50%', 
+  transform: 'translateY(-50%)', 
+  zIndex: 30, 
+  display: 'flex', 
+  flexDirection: 'column', 
+  alignItems: 'center', 
+  gap: 14, 
+  pointerEvents: 'none',
+  border: '1px solid #0e0e0c',
+  borderRadius: '999px',
+  padding: '50px 18px',
+}}>
+  {[0, 1, 2].map((i) => (
+    <svg key={i} width="48" height="26" viewBox="0 0 48 26" fill="none" style={{
+  opacity: 1 - i * 0.3,
+  animation: `chevDown 1.8s ease-in-out ${i * 0.25}s infinite`,
+}}>
+  {/* outline */}
+  <polyline points="2,2 24,22 46,2" stroke="rgba(255,255,255,0.6)" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+  {/* isi */}
+  <polyline points="2,2 24,22 46,2" stroke="#0e0e0c" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+</svg>
+  ))}
+</div>
+
+<style>{`
+  @keyframes chevDown {
+    0%, 100% { transform: translateY(0); opacity: 0.3; }
+    50% { transform: translateY(14px); opacity: 1; }
+  }
+`}</style>
             <div data-layer-container style={{ position: 'absolute', inset: 0, overflow: 'hidden', isolation: 'isolate' }} />
           </div>
         </div>
@@ -1393,12 +1613,48 @@ gsap.to(card, {
                   2026 / End of timeline
                 </p>
                 <h3 style={{ fontSize: 'clamp(42px,6vw,92px)', lineHeight: 0.86, letterSpacing: '-0.06em', fontWeight: 500, margin: '24px 0 0' }}>
-                  And now,<br />we keep going.
-                </h3>
+  And now,<br />we keep going
+  <span
+  data-portal-dot
+  style={{
+    display: 'inline-block',
+    width: 'clamp(16px,1.6vw,24px)',
+    height: 'clamp(16px,1.6vw,24px)',
+    borderRadius: '50%',
+    overflow: 'hidden',
+    verticalAlign: 'middle',
+    marginLeft: '4px',
+    marginBottom: '10px',
+    border: '1px solid rgba(0,0,0,0.2)',
+    flexShrink: 0,
+    transition: 'opacity 0.2s ease',
+  }}
+>
+  <img
+  data-portal-img
+  src="/images/interior.jpg"
+  alt=""
+  style={{
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    width: '300vmax',   // ← static fallback yang pasti cover
+    height: '300vmax',  // ← vmax = max(vw, vh), jadi selalu cover diagonal
+    transform: 'translate(-50%, -50%)',
+    objectFit: 'cover',
+    display: 'block',
+    pointerEvents: 'none',
+  }}
+/>
+</span>
+</h3>
               </div>
             </div>
           </div>
         </div>
+
+      
+
       </section>
     </>
   )
