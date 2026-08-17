@@ -378,7 +378,8 @@ export default function Hero() {
         // -------------------------------------------------------
         // HARD GATE — timeline tidak muncul sebelum hero selesai
         // -------------------------------------------------------
-
+        const navEl = document.querySelector<HTMLElement>('nav[class*="fixed"]')
+        if (navEl) navEl.style.opacity = String(1 - shrinkP)
         if (shrinkRaw < 1) {
           viewportEl.style.opacity = '0'
           return
@@ -702,8 +703,17 @@ export default function Hero() {
   gsap.set(el, { scale: 1, y: 0, x: 0 })
   gsap.set(card, { opacity: 0, y: 8 })
   const rect = el.getBoundingClientRect()
-  card.style.cssText += `;position:fixed;top:${rect.bottom + 40}px;right:${window.innerWidth - rect.right}px;left:auto;display:block;`
-  gsap.to(el, { scale: 3.5, x: rect.width * 1, y: -12, transformOrigin: 'right top', color: 'rgba(255,255,255,1)', duration: 0.3, ease: 'power3.out' })
+card.style.display = 'block'
+card.style.position = 'fixed'
+card.style.top = `${rect.bottom + 40}px`
+card.style.right = `${window.innerWidth * 0.035}px`
+card.style.left = 'auto'
+
+gsap.set(card, { opacity: 0, y: 8 })
+gsap.set(el, { scale: 1, y: 0, x: 0 })
+const xOffset = window.innerWidth * 0.088
+gsap.to(el, { scale: 3.5, y: -12, x: xOffset, transformOrigin: 'right top', color: 'rgba(255,255,255,1)', duration: 0.3, ease: 'power3.out' })
+gsap.to(card, { opacity: 1, y: 0, duration: 0.25, ease: 'power3.out' })
   navEls.forEach((other: HTMLElement, j: number) => {
     if (i !== j) gsap.to(other, { y: j > i ? 280 : 0, opacity: 1, duration: 0.35, ease: 'power3.out' })
   })
@@ -981,6 +991,45 @@ export default function Hero() {
             willChange: 'transform, border-radius',
           }}
         >
+
+           {/* CITY NAV */}
+          <nav
+            data-city-nav
+            className="absolute z-[200] flex flex-col items-end"
+            style={{ right: 0, top: '20%', transform: 'translateY(-50%)' }}
+          >
+            <div
+              style={{
+                position: 'absolute',
+                right: 'clamp(12px,2vw,28px)',
+                top: 0,
+                bottom: 0,
+                width: '0.5px',
+                background: 'rgba(255,255,255,0.5)',
+                pointerEvents: 'none',
+              }}
+            />
+            <div
+  className="flex flex-col items-end"
+  style={{ gap: 'calc(clamp(14px,2.2vw,28px) * var(--hero-scale, 1))', paddingRight: 'calc(clamp(20px,2.5vw,44px) * var(--hero-scale, 1))' }}
+>
+              {cities.map((city) => (
+                <div key={city.name} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span
+                    data-nav-dot
+                    style={{ width: 3, height: 3, borderRadius: '50%', background: 'rgba(255,255,255,0.9)', flexShrink: 0, opacity: 0, display: 'inline-block' }}
+                  />
+                  <span
+                    data-nav
+                    className="tracking-[0.28em] uppercase cursor-pointer inline-block origin-right font-light"
+                    style={{ fontSize: 'calc(clamp(11px,1vw,15px) * var(--hero-scale, 1))', color: 'rgba(255,255,255,0.9)', textShadow: '0 1px 2px rgba(0,0,0,1), 0 3px 8px rgba(0,0,0,0.95)', letterSpacing: '0.3em', gap: 'clamp(14px,2.2vw,28px)', paddingRight: 'clamp(20px,2.5vw,44px)' }}
+                  >
+                    {city.name}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </nav>
         
           {/* IMAGE GRID */}
           <div className="absolute inset-0 grid grid-cols-3 grid-rows-2 gap-[2px] overflow-hidden">
@@ -1016,43 +1065,7 @@ export default function Hero() {
             </span>
           </div>
 
-          {/* CITY NAV */}
-          <nav
-            className="absolute z-[25] flex flex-col items-end"
-            style={{ right: 0, top: '20%', transform: 'translateY(-50%)' }}
-          >
-            <div
-              style={{
-                position: 'absolute',
-                right: 'clamp(12px,2vw,28px)',
-                top: 0,
-                bottom: 0,
-                width: '0.5px',
-                background: 'rgba(255,255,255,0.5)',
-                pointerEvents: 'none',
-              }}
-            />
-            <div
-  className="flex flex-col items-end"
-  style={{ gap: 'calc(clamp(14px,2.2vw,28px) * var(--hero-scale, 1))', paddingRight: 'calc(clamp(20px,2.5vw,44px) * var(--hero-scale, 1))' }}
->
-              {cities.map((city) => (
-                <div key={city.name} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span
-                    data-nav-dot
-                    style={{ width: 3, height: 3, borderRadius: '50%', background: 'rgba(255,255,255,0.9)', flexShrink: 0, opacity: 0, display: 'inline-block' }}
-                  />
-                  <span
-                    data-nav
-                    className="tracking-[0.28em] uppercase cursor-pointer inline-block origin-right font-light"
-                    style={{ fontSize: 'calc(clamp(11px,1vw,15px) * var(--hero-scale, 1))', color: 'rgba(255,255,255,0.9)', textShadow: '0 1px 2px rgba(0,0,0,1), 0 3px 8px rgba(0,0,0,0.95)', letterSpacing: '0.3em', gap: 'clamp(14px,2.2vw,28px)', paddingRight: 'clamp(20px,2.5vw,44px)' }}
-                  >
-                    {city.name}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </nav>
+          
 
           
 
@@ -1063,50 +1076,7 @@ export default function Hero() {
             style={{ background: 'rgba(0,0,0,0.45)', opacity: 0 }}
           />
 
-          {/* CITY CARDS */}
-          <div className="hidden sm:block">
-            {cities.map((city, i) => (
-              <div
-                key={`card-${i}`}
-                data-city-card={i}
-                style={{
-                  display: 'none', position: 'fixed',
-                  width: 'min(clamp(280px,24vw,480px),calc(100vw - 60px))',
-                  height: 'clamp(140px,13vw,240px)',
-                  boxSizing: 'border-box', background: '#f4f3ef', color: '#111',
-                  padding: '8px', zIndex: 200, pointerEvents: 'none',
-                  overflow: 'hidden', border: '1px solid rgba(0,0,0,0.16)',
-                }}
-              >
-                <div style={{ display: 'grid', gridTemplateColumns: '38% 1fr', height: '100%' }}>
-                  <div style={{ position: 'relative', height: '100%', overflow: 'hidden', background: '#ddd' }}>
-                    <img src={city.img} alt={city.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                    <span style={{ position: 'absolute', top: 10, left: 10, fontSize: 8, letterSpacing: '0.16em', color: '#fff', fontWeight: 500 }}>0{i + 1}</span>
-                  </div>
-                  <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', padding: '3px 12px 4px 18px', overflow: 'hidden', minWidth: 0 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 9, borderBottom: '1px solid rgba(0,0,0,0.15)' }}>
-                      <span style={{ fontSize: 8, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#555' }}>SIRCO / PROJECT</span>
-                      <span style={{ fontSize: 8, color: '#555' }}>2026</span>
-                    </div>
-                    <div style={{ marginTop: 18, minWidth: 0 }}>
-                      <h2 style={{ margin: 0, fontSize: 'clamp(18px,2vw,36px)', lineHeight: 0.9, fontWeight: 500, letterSpacing: '-0.055em', color: '#111', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{city.name}</h2>
-                      <p style={{ margin: '9px 0 0', fontSize: 8, lineHeight: 1.4, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#666' }}>Architecture<br />Spatial Design</p>
-                    </div>
-                    <div style={{ marginTop: 'auto', display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 20, borderTop: '1px solid rgba(0,0,0,0.15)', paddingTop: 10 }}>
-                      <div>
-                        <span style={{ display: 'block', fontSize: 7, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#666', marginBottom: 4 }}>Type</span>
-                        <span style={{ fontSize: 10, color: '#111' }}>Residential</span>
-                      </div>
-                      <div>
-                        <span style={{ display: 'block', fontSize: 7, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#666', marginBottom: 4 }}>Location</span>
-                        <span style={{ fontSize: 10, color: '#111' }}>{city.name}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          
 
           {/* SIRCO */}
           <div
@@ -1168,6 +1138,53 @@ export default function Hero() {
             <div data-layer-container style={{ position: 'absolute', inset: 0, overflow: 'hidden', isolation: 'isolate' }} />
           </div>
         </div>
+
+       
+
+        {/* CITY CARDS */}
+          <div className="hidden sm:block">
+            {cities.map((city, i) => (
+              <div
+                key={`card-${i}`}
+                data-city-card={i}
+                style={{
+                  display: 'none', position: 'fixed',
+                  width: 'min(clamp(280px,24vw,480px),calc(100vw - 60px))',
+                  height: 'clamp(140px,13vw,240px)',
+                  boxSizing: 'border-box', background: '#f4f3ef', color: '#111',
+                  padding: '8px', zIndex: 200, pointerEvents: 'none',
+                  overflow: 'hidden', border: '1px solid rgba(0,0,0,0.16)',
+                }}
+              >
+                <div style={{ display: 'grid', gridTemplateColumns: '38% 1fr', height: '100%' }}>
+                  <div style={{ position: 'relative', height: '100%', overflow: 'hidden', background: '#ddd' }}>
+                    <img src={city.img} alt={city.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                    <span style={{ position: 'absolute', top: 10, left: 10, fontSize: 8, letterSpacing: '0.16em', color: '#fff', fontWeight: 500 }}>0{i + 1}</span>
+                  </div>
+                  <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', padding: '3px 12px 4px 18px', overflow: 'hidden', minWidth: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 9, borderBottom: '1px solid rgba(0,0,0,0.15)' }}>
+                      <span style={{ fontSize: 8, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#555' }}>SIRCO / PROJECT</span>
+                      <span style={{ fontSize: 8, color: '#555' }}>2026</span>
+                    </div>
+                    <div style={{ marginTop: 18, minWidth: 0 }}>
+                      <h2 style={{ margin: 0, fontSize: 'clamp(18px,2vw,36px)', lineHeight: 0.9, fontWeight: 500, letterSpacing: '-0.055em', color: '#111', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{city.name}</h2>
+                      <p style={{ margin: '9px 0 0', fontSize: 8, lineHeight: 1.4, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#666' }}>Architecture<br />Spatial Design</p>
+                    </div>
+                    <div style={{ marginTop: 'auto', display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 20, borderTop: '1px solid rgba(0,0,0,0.15)', paddingTop: 10 }}>
+                      <div>
+                        <span style={{ display: 'block', fontSize: 7, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#666', marginBottom: 4 }}>Type</span>
+                        <span style={{ fontSize: 10, color: '#111' }}>Residential</span>
+                      </div>
+                      <div>
+                        <span style={{ display: 'block', fontSize: 7, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#666', marginBottom: 4 }}>Location</span>
+                        <span style={{ fontSize: 10, color: '#111' }}>{city.name}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
 
         {/* COOKIE */}
         <div
