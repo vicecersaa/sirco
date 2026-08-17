@@ -173,7 +173,7 @@ const milestones = [
 ]
 
 const TARGET_W = 0.31
-const TARGET_H = 0.45
+
 const TARGET_X = 0.03
 const TARGET_Y = 0.13
 
@@ -344,7 +344,7 @@ export default function Hero() {
       end: `+=${TOTAL_SCROLL_VH}vh`,
       pin: true,
       pinSpacing: true,
-      scrub: 0.8,
+      scrub: 0.3,
       anticipatePin: 1,
       invalidateOnRefresh: true,
 
@@ -362,16 +362,19 @@ export default function Hero() {
         const vw = window.innerWidth
         const vh = window.innerHeight
 
+        const TARGET_H_CALC = TARGET_W * (vw / vh) * 0.61
         const scaleX = 1 - (1 - TARGET_W) * shrinkP
-        const scaleY = 1 - (1 - TARGET_H) * shrinkP
+        const scaleY = 1 - (1 - TARGET_H_CALC) * shrinkP
         const tx = TARGET_X * vw * shrinkP
         const ty = TARGET_Y * vh * shrinkP
         const br = 18 * shrinkP
 
-        heroEl.style.transform =
-          `translate3d(${tx}px, ${ty}px, 0) scale3d(${scaleX}, ${scaleY}, 1)`
+        heroEl.style.transform = `translate3d(${tx}px, ${ty}px, 0) scale3d(${scaleX}, ${scaleY}, 1)`
         heroEl.style.borderRadius = `${br}px`
-
+        
+       
+        const isShrunken = shrinkP > 0.95
+        heroEl.style.pointerEvents = isShrunken ? 'none' : 'auto'
         // -------------------------------------------------------
         // HARD GATE — timeline tidak muncul sebelum hero selesai
         // -------------------------------------------------------
@@ -419,7 +422,7 @@ export default function Hero() {
         // activeFloat: posisi "float" antar item (0 → SNAP_ITEM_COUNT-1)
         const activeFloat = timelineProgress * (SNAP_ITEM_COUNT - 1)
         const activeIndex = Math.round(activeFloat)
-
+        console.log('activeFloat:', activeFloat, 'activeIndex:', activeIndex)
         // t: seberapa jauh kita sudah berpindah dari item sebelumnya ke berikutnya
         // 0 = pas di item, 0.5 = di tengah transisi, 1 = pas di item berikutnya
         const fromIndex = Math.floor(activeFloat)
@@ -443,27 +446,14 @@ export default function Hero() {
         const SCALE_OUT    = 0.94
         const SCALE_IN     = 1.0
 
-        items.forEach((item: HTMLElement, index: number) => {
-          let opacity: number
-
-          if (fromIndex === toIndex) {
-            opacity = index === activeIndex ? 1 : 0
-          } else {
-            if (index === fromIndex) {
-              opacity = 1 - easeFrac
-            } else if (index === toIndex) {
-              opacity = easeFrac
-            } else {
-              opacity = 0
-            }
-          }
-
-          const finalOpacity = Math.max(0, Math.min(1, opacity))
-          item.style.opacity    = String(finalOpacity)
-          item.style.transform  = 'translate3d(0, 0, 0)'
-          item.style.filter     = 'none'
-          item.style.visibility = finalOpacity < 0.01 ? 'hidden' : 'visible'
-        })
+       items.forEach((item: HTMLElement, index: number) => {
+  const finalOpacity = index === activeIndex ? 1 : 0
+  item.style.opacity = String(finalOpacity)
+  item.style.transform = 'translate3d(0, 0, 0)'
+  item.style.filter = 'none'
+  item.style.textShadow = 'none'
+  item.style.visibility = finalOpacity < 0.01 ? 'hidden' : 'visible'
+})
       },
     })
 
@@ -703,22 +693,22 @@ export default function Hero() {
       const card = document.querySelector<HTMLElement>(`[data-city-card="${i}"]`)
 
       el.addEventListener('mouseenter', () => {
-        if (isTouch() || !card) return
-        autoPlayPaused = true
-        hoveredProject = 0
-        window.clearTimeout(autoPlayTimer)
-        showAllProjects()
-        gsap.to(focusOverlay, { opacity: 1, duration: 0.35, ease: 'power2.out' })
-        gsap.set(el, { scale: 1, y: 0 })
-        gsap.set(card, { opacity: 0, y: 8 })
-        const rect = el.getBoundingClientRect()
-        card.style.cssText += `;position:fixed;top:${rect.bottom + 48}px;right:${Math.max(16, Math.min(40, window.innerWidth - card.offsetWidth - 16))}px;left:auto;display:block;`
-        gsap.to(el, { scale: 3.5, y: -12, transformOrigin: 'right top', color: 'rgba(255,255,255,1)', duration: 0.3, ease: 'power3.out' })
-        navEls.forEach((other: HTMLElement, j: number) => {
-          if (i !== j) gsap.to(other, { y: j > i ? 280 : 0, opacity: 1, duration: 0.35, ease: 'power3.out' })
-        })
-        gsap.to(card, { opacity: 1, y: 0, duration: 0.25, ease: 'power3.out' })
-      })
+  if (isTouch() || !card) return
+  autoPlayPaused = true
+  hoveredProject = 0
+  window.clearTimeout(autoPlayTimer)
+  showAllProjects()
+  gsap.to(focusOverlay, { opacity: 1, duration: 0.35, ease: 'power2.out' })
+  gsap.set(el, { scale: 1, y: 0, x: 0 })
+  gsap.set(card, { opacity: 0, y: 8 })
+  const rect = el.getBoundingClientRect()
+  card.style.cssText += `;position:fixed;top:${rect.bottom + 40}px;right:${window.innerWidth - rect.right}px;left:auto;display:block;`
+  gsap.to(el, { scale: 3.5, x: 110, y: -12, transformOrigin: 'right top', color: 'rgba(255,255,255,1)', duration: 0.3, ease: 'power3.out' })
+  navEls.forEach((other: HTMLElement, j: number) => {
+    if (i !== j) gsap.to(other, { y: j > i ? 280 : 0, opacity: 1, duration: 0.35, ease: 'power3.out' })
+  })
+  gsap.to(card, { opacity: 1, y: 0, duration: 0.25, ease: 'power3.out' })
+})
 
       el.addEventListener('mouseleave', () => {
         if (isTouch()) return
@@ -726,10 +716,10 @@ export default function Hero() {
         window.clearTimeout(autoPlayTimer)
         showAllProjects()
         gsap.to(focusOverlay, { opacity: 0, duration: 0.25 })
-        gsap.to(el, { scale: 1, y: 0, color: 'rgba(255,255,255,0.8)', duration: 0.3, ease: 'power3.out' })
+        gsap.to(el, { scale: 1, x: 0, y: 0, color: 'rgba(255,255,255,0.8)', duration: 0.3, ease: 'power3.out', overwrite: true })
         navEls.forEach((other: HTMLElement, j: number) => {
-          if (i !== j) gsap.to(other, { y: 0, opacity: 1, duration: 0.3, ease: 'power3.out' })
-        })
+  if (i !== j) gsap.to(other, { y: 0, opacity: 1, duration: 0.3, ease: 'power3.out', overwrite: true })
+})
         if (card) gsap.to(card, { opacity: 0, y: 8, duration: 0.2, ease: 'power2.in', onComplete: () => { card.style.display = 'none' } })
       })
 
@@ -979,14 +969,19 @@ export default function Hero() {
         {/* HERO INNER */}
         <div
           ref={heroInner}
-          className="absolute inset-0 overflow-hidden"
+          className="absolute overflow-hidden"
           style={{
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
             zIndex: 10,
             background: '#0e0e0c',
             transformOrigin: 'top left',
             willChange: 'transform, border-radius',
           }}
         >
+        
           {/* IMAGE GRID */}
           <div className="absolute inset-0 grid grid-cols-3 grid-rows-2 gap-[2px] overflow-hidden">
             {[1, 2, 3, 4, 5].map((n) => {
@@ -1038,9 +1033,9 @@ export default function Hero() {
               }}
             />
             <div
-              className="flex flex-col items-end"
-              style={{ gap: 'clamp(14px,2.2vw,28px)', paddingRight: 'clamp(20px,2.5vw,44px)' }}
-            >
+  className="flex flex-col items-end"
+  style={{ gap: 'calc(clamp(14px,2.2vw,28px) * var(--hero-scale, 1))', paddingRight: 'calc(clamp(20px,2.5vw,44px) * var(--hero-scale, 1))' }}
+>
               {cities.map((city) => (
                 <div key={city.name} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <span
@@ -1050,7 +1045,7 @@ export default function Hero() {
                   <span
                     data-nav
                     className="tracking-[0.28em] uppercase cursor-pointer inline-block origin-right font-light"
-                    style={{ fontSize: 'clamp(11px,1vw,15px)', color: 'rgba(255,255,255,0.9)', textShadow: '0 1px 2px rgba(0,0,0,1), 0 3px 8px rgba(0,0,0,0.95)', letterSpacing: '0.3em' }}
+                    style={{ fontSize: 'calc(clamp(11px,1vw,15px) * var(--hero-scale, 1))', color: 'rgba(255,255,255,0.9)', textShadow: '0 1px 2px rgba(0,0,0,1), 0 3px 8px rgba(0,0,0,0.95)', letterSpacing: '0.3em', gap: 'clamp(14px,2.2vw,28px)', paddingRight: 'clamp(20px,2.5vw,44px)' }}
                   >
                     {city.name}
                   </span>
@@ -1058,6 +1053,8 @@ export default function Hero() {
               ))}
             </div>
           </nav>
+
+          
 
           {/* FOCUS OVERLAY */}
           <div
