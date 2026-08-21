@@ -3,6 +3,7 @@
 import { useRef, useEffect } from 'react'
 import { gsap } from '@/lib/gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { motion } from "framer-motion";
 import SplitType from 'split-type'
 
 gsap.registerPlugin(ScrollTrigger)
@@ -333,9 +334,12 @@ export default function Hero() {
     const SHRINK_VH = 320
 const TIMELINE_REVEAL_VH = 65
 const TIMELINE_SCROLL_VH = (SNAP_ITEM_COUNT + 1) * 100
-const PORTAL_SCROLL_VH = 200
-const TOTAL_SCROLL_VH = SHRINK_VH + TIMELINE_REVEAL_VH + TIMELINE_SCROLL_VH + PORTAL_SCROLL_VH
-    let portalOrigin: { x: number; y: number } | null = null
+
+const TOTAL_SCROLL_VH =
+  SHRINK_VH +
+  TIMELINE_REVEAL_VH +
+  TIMELINE_SCROLL_VH
+    
     const shrinkST = ScrollTrigger.create({
       trigger: containerEl,
       start: 'top top',
@@ -348,16 +352,6 @@ const TOTAL_SCROLL_VH = SHRINK_VH + TIMELINE_REVEAL_VH + TIMELINE_SCROLL_VH + PO
 
       onUpdate(self) {
         const raw = self.progress
-        const _mw = document.querySelector<HTMLElement>('[data-material-wrapper]')
-  console.log('CLIP:', _mw?.style.clipPath, 'raw:', raw.toFixed(3))
-
-        const portalStart = (SHRINK_VH + TIMELINE_REVEAL_VH + TIMELINE_SCROLL_VH) / TOTAL_SCROLL_VH
-// Tambah offset 0.02 supaya portal baru mulai setelah end item settled
-const portalProgressRaw = (raw - (portalStart + 0.02)) / (PORTAL_SCROLL_VH / TOTAL_SCROLL_VH)
-const portalProgress = gsap.utils.clamp(0, 1, portalProgressRaw)
-  console.log({ raw, portalStart, portalProgress })
-
-
         // -------------------------------------------------------
         // SHRINK
         // -------------------------------------------------------
@@ -430,7 +424,7 @@ const timelineProgress =
       )
 
         // activeFloat: posisi "float" antar item (0 → SNAP_ITEM_COUNT-1)
-        const DWELL_RATIO = 0.50  // 15% scroll terakhir = dwell di end item
+        const DWELL_RATIO = 0.15  // 15% scroll terakhir = dwell di end item
 const adjustedProgress = timelineProgress < (1 - DWELL_RATIO)
   ? timelineProgress / (1 - DWELL_RATIO) * ((SNAP_ITEM_COUNT - 2) / (SNAP_ITEM_COUNT - 1))
   : (SNAP_ITEM_COUNT - 2) / (SNAP_ITEM_COUNT - 1) + 
@@ -438,6 +432,9 @@ const adjustedProgress = timelineProgress < (1 - DWELL_RATIO)
 
 const activeFloat = adjustedProgress * (SNAP_ITEM_COUNT - 1)
         const activeIndex = Math.round(activeFloat)
+
+
+      
         console.log('activeFloat:', activeFloat, 'activeIndex:', activeIndex)
         // t: seberapa jauh kita sudah berpindah dari item sebelumnya ke berikutnya
         // 0 = pas di item, 0.5 = di tengah transisi, 1 = pas di item berikutnya
@@ -471,60 +468,9 @@ const activeFloat = adjustedProgress * (SNAP_ITEM_COUNT - 1)
   item.style.visibility = finalOpacity < 0.01 ? 'hidden' : 'visible'
 })
 
-// ── PORTAL RIPPLE WIPE ────────────────────────────────────
-const portalDot = document.querySelector<HTMLElement>('[data-portal-dot]')
-const materialWrapper = document.querySelector<HTMLElement>('[data-material-wrapper]')
 
-// Capture origin saat end item active DAN portal belum mulai
-if (activeIndex === SNAP_ITEM_COUNT - 1 && portalProgress < 0.001 && !portalOrigin && portalDot) {
-  const r = portalDot.getBoundingClientRect()
-  if (r.width > 0 && r.height > 0) {
-    portalOrigin = { x: r.left + r.width / 2, y: r.top + r.height / 2 }
-  }
-}
 
-// Reset saat mundur dari end item
-if (activeIndex < SNAP_ITEM_COUNT - 1 && portalProgress < 0.001) {
-  portalOrigin = null
-  if (materialWrapper) {
-    materialWrapper.style.clipPath = 'circle(0px at 50% 50%)'
-    materialWrapper.style.pointerEvents = 'none'
-  }
-  if (portalDot) portalDot.style.opacity = '1'
-}
 
-console.log({
-  activeIndex,
-  portalProgress,
-  portalOrigin,
-  clipPath: materialWrapper?.style.clipPath,
-})
-
-// Animate
-if (portalOrigin && materialWrapper && portalProgress > 0) {
-  const easedPortal = easeInOut(portalProgress)
-  const { x: cx, y: cy } = portalOrigin
-  const endR = Math.sqrt(
-    Math.pow(Math.max(cx, window.innerWidth - cx), 2) +
-    Math.pow(Math.max(cy, window.innerHeight - cy), 2)
-  ) * 1.1
-  const currentR = 12 + (endR - 12) * easedPortal
-  materialWrapper.style.clipPath = `circle(${currentR}px at ${cx}px ${cy}px)`
-  materialWrapper.style.pointerEvents = easedPortal > 0.5 ? 'auto' : 'none'
-  if (portalDot) portalDot.style.opacity = portalProgress > 0.05 ? '0' : '1'
-}
-
-// ── MATERIAL SECTION ENTER ──────────────────────────────
-if (portalProgress >= 0.85 && portalProgress < 0.9) {
-  const ms = document.querySelector<HTMLElement>(
-    '[data-material-section]'
-  )
-
-  if (ms && !ms.dataset.animated) {
-    ms.dataset.animated = 'true'
-    ms.dispatchEvent(new CustomEvent('portal-enter'))
-  }
-}
 
 
       },
@@ -1195,18 +1141,7 @@ if (cur && cur !== target) {
     transform: 'translateY(-50%)',
   }}
 >
-  {/* Vertical line */}
-  <div
-    style={{
-      position: 'absolute',
-      right: 'clamp(12px, 2vw, 28px)',
-      top: 0,
-      bottom: 0,
-      width: '0.5px',
-      background: 'rgba(255,255,255,0.5)',
-      pointerEvents: 'none',
-    }}
-  />
+  
 
   {/* City links */}
   <div
@@ -1395,7 +1330,7 @@ if (cur && cur !== target) {
           </div>
         </div>
 
-       
+        
 
         {/* CITY CARDS */}
           <div className="hidden sm:block">
@@ -1613,47 +1548,15 @@ if (cur && cur !== target) {
                   2026 / End of timeline
                 </p>
                 <h3 style={{ fontSize: 'clamp(42px,6vw,92px)', lineHeight: 0.86, letterSpacing: '-0.06em', fontWeight: 500, margin: '24px 0 0' }}>
-  And now,<br />we keep going
-  <span
-  data-portal-dot
-  style={{
-    display: 'inline-block',
-    width: 'clamp(16px,1.6vw,24px)',
-    height: 'clamp(16px,1.6vw,24px)',
-    borderRadius: '50%',
-    overflow: 'hidden',
-    verticalAlign: 'middle',
-    marginLeft: '4px',
-    marginBottom: '10px',
-    border: '1px solid rgba(0,0,0,0.2)',
-    flexShrink: 0,
-    transition: 'opacity 0.2s ease',
-  }}
->
-  <img
-  data-portal-img
-  src="/images/interior.jpg"
-  alt=""
-  style={{
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    width: '300vmax',   // ← static fallback yang pasti cover
-    height: '300vmax',  // ← vmax = max(vw, vh), jadi selalu cover diagonal
-    transform: 'translate(-50%, -50%)',
-    objectFit: 'cover',
-    display: 'block',
-    pointerEvents: 'none',
-  }}
-/>
-</span>
+  And now,<br />we keep going.
+  
 </h3>
               </div>
             </div>
           </div>
         </div>
 
-      
+              
 
       </section>
     </>
